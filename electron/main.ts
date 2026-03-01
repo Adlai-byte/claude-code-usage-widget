@@ -1,5 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain } from 'electron';
 import path from 'path';
+import fs from 'fs';
+import { readHistoryFile, readAllSessionLogs, watchForChanges } from './data-reader';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -86,9 +88,50 @@ ipcMain.handle('toggle-expand', () => {
 
 ipcMain.handle('get-expanded', () => isExpanded);
 
+const SETTINGS_PATH = path.join(app.getPath('userData'), 'widget-settings.json');
+
+function loadAndSendData() {
+  const historyLines = readHistoryFile();
+  const sessionLines = readAllSessionLogs();
+  mainWindow?.webContents.send('usage-data-update', { historyLines, sessionLines });
+}
+
+ipcMain.handle('get-usage-data', () => {
+  const historyLines = readHistoryFile();
+  const sessionLines = readAllSessionLogs();
+  return { historyLines, sessionLines };
+});
+
+ipcMain.handle('get-settings', () => {
+  try {
+    const content = fs.readFileSync(SETTINGS_PATH, 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle('save-settings', (_event, settings) => {
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
+});
+
 app.whenReady().then(() => {
   createWindow();
   createTray();
+
+  // Send data once the renderer is ready
+  mainWindow?.webContents.on('did-finish-load', () => {
+    loadAndSendData();
+  });
+
+  // Watch for file changes with 2s debounce
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  watchForChanges(() => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      loadAndSendData();
+    }, 2000);
+  });
 });
 
 app.on('window-all-closed', () => {
