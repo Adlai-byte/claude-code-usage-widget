@@ -30,6 +30,11 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             className="w-full text-sm rounded px-2 py-1.5" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} min={0} step={100000} />
         </div>
         <div>
+          <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-secondary)' }}>Weekly Token Budget (0 = no limit)</label>
+          <input type="number" value={settings.weeklyBudget} onChange={e => onUpdate({ weeklyBudget: Number(e.target.value) })}
+            className="w-full text-sm rounded px-2 py-1.5" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} min={0} step={500000} />
+        </div>
+        <div>
           <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-secondary)' }}>Monthly Token Budget (0 = no limit)</label>
           <input type="number" value={settings.monthlyBudget} onChange={e => onUpdate({ monthlyBudget: Number(e.target.value) })}
             className="w-full text-sm rounded px-2 py-1.5" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} min={0} step={1000000} />

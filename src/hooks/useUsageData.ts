@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { UsageData } from '../types';
-import { parseSessionLine, parseHistoryLine } from '../lib/parser';
-import { aggregateUsage } from '../lib/aggregator';
 
 declare global {
   interface Window {
     electronAPI?: {
-      getUsageData: () => Promise<{ historyLines: string[]; sessionLines: string[] }>;
-      onDataUpdate: (cb: (data: { historyLines: string[]; sessionLines: string[] }) => void) => () => void;
+      getUsageData: () => Promise<UsageData>;
+      onDataUpdate: (cb: (data: UsageData) => void) => () => void;
       toggleExpand: () => Promise<boolean>;
       getExpanded: () => Promise<boolean>;
       getSettings: () => Promise<any>;
@@ -19,15 +17,12 @@ declare global {
 const EMPTY_DATA: UsageData = {
   totalTokens: 0, totalCost: 0, totalSessions: 0,
   todayTokens: 0, todayCost: 0, todaySessions: 0,
+  weekTokens: 0, weekCost: 0, weekSessions: 0,
+  currentSessionId: '', currentSessionTokens: 0, currentSessionCost: 0,
   dailyUsage: [], projectUsage: [], heatmap: [], modelUsage: [],
   lastUpdated: 0,
+  planUsage: null,
 };
-
-function processRawData(raw: { historyLines: string[]; sessionLines: string[] }): UsageData {
-  const records = raw.sessionLines.map(parseSessionLine).filter(Boolean) as any[];
-  const infos = raw.historyLines.map(parseHistoryLine).filter(Boolean) as any[];
-  return aggregateUsage(records, infos);
-}
 
 export function useUsageData(refreshInterval: number) {
   const [data, setData] = useState<UsageData>(EMPTY_DATA);
@@ -37,8 +32,8 @@ export function useUsageData(refreshInterval: number) {
   const loadData = useCallback(async () => {
     if (!window.electronAPI) return;
     try {
-      const raw = await window.electronAPI.getUsageData();
-      setData(processRawData(raw));
+      const result = await window.electronAPI.getUsageData();
+      setData(result);
     } catch (err) {
       console.error('Failed to load usage data:', err);
     } finally {
@@ -48,8 +43,8 @@ export function useUsageData(refreshInterval: number) {
 
   useEffect(() => {
     loadData();
-    const cleanup = window.electronAPI?.onDataUpdate((raw) => {
-      setData(processRawData(raw));
+    const cleanup = window.electronAPI?.onDataUpdate((data) => {
+      setData(data);
     });
     return () => cleanup?.();
   }, [loadData]);

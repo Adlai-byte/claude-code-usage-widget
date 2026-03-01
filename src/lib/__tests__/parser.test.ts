@@ -2,17 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { parseSessionLine, parseHistoryLine, calculateCost } from '../parser';
 
 describe('parseSessionLine', () => {
-  it('extracts usage from an assistant record', () => {
+  it('extracts usage from an assistant record (real format: usage inside message)', () => {
     const line = JSON.stringify({
       type: 'assistant',
       sessionId: 'abc-123',
       timestamp: '2026-03-01T10:00:00.000Z',
-      message: { model: 'claude-opus-4-6' },
-      usage: {
-        input_tokens: 100,
-        output_tokens: 50,
-        cache_creation_input_tokens: 200,
-        cache_read_input_tokens: 300,
+      message: {
+        model: 'claude-opus-4-6',
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_creation_input_tokens: 200,
+          cache_read_input_tokens: 300,
+        },
       },
     });
 
@@ -40,8 +42,7 @@ describe('parseSessionLine', () => {
       type: 'assistant',
       sessionId: 'abc',
       timestamp: '2026-03-01T10:00:00.000Z',
-      message: { model: 'claude-opus-4-6' },
-      usage: { input_tokens: 10, output_tokens: 5 },
+      message: { model: 'claude-opus-4-6', usage: { input_tokens: 10, output_tokens: 5 } },
     });
     const result = parseSessionLine(line);
     expect(result!.usage.cacheCreationTokens).toBe(0);

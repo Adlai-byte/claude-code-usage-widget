@@ -15,8 +15,16 @@ function getToday(): string {
   return formatDate(Date.now());
 }
 
+function getWeekStart(): string {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun
+  const diff = now.getTime() - day * 86400000;
+  return formatDate(diff);
+}
+
 export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): UsageData {
   const today = getToday();
+  const weekStart = getWeekStart();
 
   const sessionProjectMap = new Map<string, string>();
   for (const info of infos) {
@@ -36,7 +44,16 @@ export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): 
   let totalCost = 0;
   let todayTokens = 0;
   let todayCost = 0;
+  let weekTokens = 0;
+  let weekCost = 0;
   const todaySessions = new Set<string>();
+  const weekSessions = new Set<string>();
+
+  // Track per-session usage to find the current (most recent) session
+  const sessionTokens = new Map<string, number>();
+  const sessionCosts = new Map<string, number>();
+  let latestSessionId = '';
+  let latestTimestamp = 0;
 
   for (const rec of records) {
     const date = formatDate(rec.timestamp);
@@ -47,10 +64,26 @@ export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): 
     totalCost += cost;
     allSessions.add(rec.sessionId);
 
+    // Track most recent session
+    if (rec.timestamp > latestTimestamp) {
+      latestTimestamp = rec.timestamp;
+      latestSessionId = rec.sessionId;
+    }
+
+    // Per-session accumulation
+    sessionTokens.set(rec.sessionId, (sessionTokens.get(rec.sessionId) ?? 0) + tokens);
+    sessionCosts.set(rec.sessionId, (sessionCosts.get(rec.sessionId) ?? 0) + cost);
+
     if (date === today) {
       todayTokens += tokens;
       todayCost += cost;
       todaySessions.add(rec.sessionId);
+    }
+
+    if (date >= weekStart) {
+      weekTokens += tokens;
+      weekCost += cost;
+      weekSessions.add(rec.sessionId);
     }
 
     if (!dailyMap.has(date)) {
@@ -122,10 +155,17 @@ export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): 
     todayTokens,
     todayCost,
     todaySessions: todaySessions.size,
+    weekTokens,
+    weekCost,
+    weekSessions: weekSessions.size,
+    currentSessionId: latestSessionId,
+    currentSessionTokens: sessionTokens.get(latestSessionId) ?? 0,
+    currentSessionCost: sessionCosts.get(latestSessionId) ?? 0,
     dailyUsage,
     projectUsage,
     heatmap,
     modelUsage,
     lastUpdated: Date.now(),
+    planUsage: null,
   };
 }

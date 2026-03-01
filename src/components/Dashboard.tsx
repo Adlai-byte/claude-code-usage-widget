@@ -37,16 +37,80 @@ export default function Dashboard({ data, settings, onUpdateSettings, onCollapse
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ WebkitAppRegion: 'no-drag' } as any}>
-        <div className="grid grid-cols-4 gap-3">
+        {/* Plan usage bars */}
+        {data.planUsage && (data.planUsage.fiveHour || data.planUsage.sevenDay) && (
+          <div className="rounded-lg p-3 space-y-2" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>
+              {data.planUsage.subscriptionType ? `${data.planUsage.subscriptionType.charAt(0).toUpperCase() + data.planUsage.subscriptionType.slice(1)} Plan` : 'Plan'} Usage
+            </div>
+            {data.planUsage.fiveHour && (
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span style={{ color: 'var(--text-primary)' }}>Session (5h window)</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{Math.round(data.planUsage.fiveHour.utilization)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-secondary)' }}>
+                  <div className="h-full rounded-full" style={{ width: Math.round(data.planUsage.fiveHour.utilization) + '%', background: data.planUsage.fiveHour.utilization >= 90 ? '#ef4444' : data.planUsage.fiveHour.utilization >= 75 ? '#f59e0b' : '#3b82f6' }} />
+                </div>
+              </div>
+            )}
+            {data.planUsage.sevenDay && (
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span style={{ color: 'var(--text-primary)' }}>Weekly (all models)</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{Math.round(data.planUsage.sevenDay.utilization)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-secondary)' }}>
+                  <div className="h-full rounded-full" style={{ width: Math.round(data.planUsage.sevenDay.utilization) + '%', background: data.planUsage.sevenDay.utilization >= 90 ? '#ef4444' : data.planUsage.sevenDay.utilization >= 75 ? '#f59e0b' : '#3b82f6' }} />
+                </div>
+              </div>
+            )}
+            {data.planUsage.sevenDaySonnet && (
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span style={{ color: 'var(--text-primary)' }}>Weekly (Sonnet)</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{Math.round(data.planUsage.sevenDaySonnet.utilization)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-secondary)' }}>
+                  <div className="h-full rounded-full" style={{ width: Math.round(data.planUsage.sevenDaySonnet.utilization) + '%', background: data.planUsage.sevenDaySonnet.utilization >= 90 ? '#ef4444' : data.planUsage.sevenDaySonnet.utilization >= 75 ? '#f59e0b' : '#3b82f6' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Current session highlight */}
+        <div className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'var(--bg-card)', border: '1px solid var(--accent)', borderColor: 'color-mix(in srgb, var(--accent) 40%, var(--border))' }}>
+          <div>
+            <div className="text-xs mb-0.5" style={{ color: 'var(--accent)' }}>Current Session</div>
+            <div className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>{data.currentSessionId.slice(0, 8)}...</div>
+          </div>
+          <div className="flex gap-6">
+            <div className="text-right">
+              <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{formatTokens(data.currentSessionTokens)}</div>
+              <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>tokens</div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>${data.currentSessionCost.toFixed(2)}</div>
+              <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>cost</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total Tokens', value: formatTokens(data.totalTokens) },
-            { label: 'Total Cost', value: '$' + data.totalCost.toFixed(2) },
-            { label: 'Sessions', value: data.totalSessions.toString() },
-            { label: 'Projects', value: data.projectUsage.length.toString() },
+            { label: 'Today', tokens: formatTokens(data.todayTokens), cost: '$' + data.todayCost.toFixed(2), sub: data.todaySessions + ' sessions' },
+            { label: 'This Week', tokens: formatTokens(data.weekTokens), cost: '$' + data.weekCost.toFixed(2), sub: data.weekSessions + ' sessions' },
+            { label: 'All Time', tokens: formatTokens(data.totalTokens), cost: '$' + data.totalCost.toFixed(2), sub: data.totalSessions + ' sessions' },
           ].map(card => (
             <div key={card.label} className="rounded-lg p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <div className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{card.label}</div>
-              <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</div>
+              <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{card.tokens}</div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>{card.cost}</span>
+                <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{card.sub}</span>
+              </div>
             </div>
           ))}
         </div>

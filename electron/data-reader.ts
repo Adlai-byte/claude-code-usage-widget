@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import readline from 'readline';
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const HISTORY_FILE = path.join(CLAUDE_DIR, 'history.jsonl');
@@ -25,18 +26,44 @@ export function readAllSessionLogs(): string[] {
     const projectDirs = fs.readdirSync(PROJECTS_DIR);
     for (const dir of projectDirs) {
       const dirPath = path.join(PROJECTS_DIR, dir);
-      const stat = fs.statSync(dirPath);
+      let stat;
+      try {
+        stat = fs.statSync(dirPath);
+      } catch {
+        continue;
+      }
       if (!stat.isDirectory()) continue;
 
-      const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.jsonl'));
+      let files;
+      try {
+        files = fs.readdirSync(dirPath).filter(f => f.endsWith('.jsonl'));
+      } catch {
+        continue;
+      }
+
       for (const file of files) {
         const filePath = path.join(dirPath, file);
-        lines.push(...readJsonlFile(filePath));
+        try {
+          // Only read files that we can handle — skip very large files
+          // and only extract assistant records with usage data
+          const fileStat = fs.statSync(filePath);
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const fileLines = content.split('\n');
+          for (const line of fileLines) {
+            // Quick pre-filter: only keep lines that contain "assistant" and "usage"
+            if (line.includes('"type":"assistant"') && line.includes('"usage"')) {
+              lines.push(line);
+            }
+          }
+        } catch {
+          // Skip files that can't be read
+        }
       }
     }
   } catch {
     // projects dir may not exist
   }
+  console.log(`[data-reader] Read ${lines.length} assistant records from session logs`);
   return lines;
 }
 

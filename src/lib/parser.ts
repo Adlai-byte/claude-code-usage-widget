@@ -3,13 +3,17 @@ import { SessionRecord, SessionInfo, TokenUsage, MODEL_PRICING, DEFAULT_PRICING 
 export function parseSessionLine(line: string): SessionRecord | null {
   try {
     const data = JSON.parse(line);
-    if (data.type !== 'assistant' || !data.usage) return null;
+    if (data.type !== 'assistant') return null;
+
+    // usage lives inside data.message (Claude Code log format)
+    const rawUsage = data.message?.usage ?? data.usage;
+    if (!rawUsage) return null;
 
     const usage: TokenUsage = {
-      inputTokens: data.usage.input_tokens ?? 0,
-      outputTokens: data.usage.output_tokens ?? 0,
-      cacheCreationTokens: data.usage.cache_creation_input_tokens ?? 0,
-      cacheReadTokens: data.usage.cache_read_input_tokens ?? 0,
+      inputTokens: rawUsage.input_tokens ?? 0,
+      outputTokens: rawUsage.output_tokens ?? 0,
+      cacheCreationTokens: rawUsage.cache_creation_input_tokens ?? 0,
+      cacheReadTokens: rawUsage.cache_read_input_tokens ?? 0,
     };
 
     return {

@@ -63,5 +63,19 @@ describe('aggregateUsage', () => {
     expect(result.totalTokens).toBe(0);
     expect(result.totalCost).toBe(0);
     expect(result.totalSessions).toBe(0);
+    expect(result.weekTokens).toBe(0);
+    expect(result.currentSessionId).toBe('');
+    expect(result.currentSessionTokens).toBe(0);
+    expect(result.planUsage).toBeNull();
+  });
+
+  it('tracks current session as most recent by timestamp', () => {
+    const records = [
+      makeRecord({ sessionId: 'old-sess', timestamp: new Date('2026-02-28T10:00:00Z').getTime() }),
+      makeRecord({ sessionId: 'new-sess', timestamp: new Date('2026-03-01T12:00:00Z').getTime() }),
+    ];
+    const result = aggregateUsage(records, []);
+    expect(result.currentSessionId).toBe('new-sess');
+    expect(result.currentSessionTokens).toBe(150); // 100 + 50
   });
 });
