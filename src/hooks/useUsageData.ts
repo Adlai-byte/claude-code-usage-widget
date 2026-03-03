@@ -22,6 +22,7 @@ const EMPTY_DATA: UsageData = {
   dailyUsage: [], projectUsage: [], heatmap: [], modelUsage: [],
   lastUpdated: 0,
   planUsage: null,
+  tokenStatus: 'missing' as const,
 };
 
 export function useUsageData(refreshInterval: number) {

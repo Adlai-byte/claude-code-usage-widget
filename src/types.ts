@@ -83,6 +83,7 @@ export interface UsageData {
   modelUsage: ModelUsage[];
   lastUpdated: number;
   planUsage: PlanUsage | null;
+  tokenStatus: 'ok' | 'expired' | 'missing';
 }
 
 export interface AppSettings {

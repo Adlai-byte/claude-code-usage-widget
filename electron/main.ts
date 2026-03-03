@@ -4,7 +4,7 @@ import fs from 'fs';
 import { readHistoryFile, readAllSessionLogs, watchForChanges } from './data-reader';
 import { parseSessionLine, parseHistoryLine } from '../src/lib/parser';
 import { aggregateUsage } from '../src/lib/aggregator';
-import { fetchPlanUsage } from './plan-usage';
+import { fetchPlanUsage, watchCredentials, getTokenStatus } from './plan-usage';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -126,7 +126,7 @@ async function refreshPlanUsage() {
 
 function buildUsageData() {
   const localData = buildLocalUsageData();
-  return { ...localData, planUsage: cachedPlanUsage };
+  return { ...localData, planUsage: cachedPlanUsage, tokenStatus: getTokenStatus() };
 }
 
 function loadAndSendData() {
@@ -171,8 +171,14 @@ app.whenReady().then(async () => {
   // Refresh plan usage every 60s on its own timer
   setInterval(async () => {
     await refreshPlanUsage();
-    loadAndSendData(); // Push updated data to renderer
+    loadAndSendData();
   }, 60_000);
+
+  // Watch credentials file — when Claude Code refreshes the token, re-fetch immediately
+  watchCredentials(async () => {
+    await refreshPlanUsage();
+    loadAndSendData();
+  });
 
   // Watch for local file changes with 2s debounce (no API call here)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;

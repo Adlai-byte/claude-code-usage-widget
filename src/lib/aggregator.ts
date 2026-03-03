@@ -167,5 +167,6 @@ export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): 
     modelUsage,
     lastUpdated: Date.now(),
     planUsage: null,
+    tokenStatus: 'ok' as const,
   };
 }

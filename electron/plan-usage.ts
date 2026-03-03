@@ -6,8 +6,6 @@ import { PlanUsage } from '../src/types';
 
 const CREDENTIALS_PATH = path.join(os.homedir(), '.claude', '.credentials.json');
 const USAGE_API_URL = 'https://api.anthropic.com/api/oauth/usage';
-const TOKEN_REFRESH_URL = 'https://console.anthropic.com/api/oauth/token';
-const OAUTH_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 
 interface Credentials {
   claudeAiOauth?: {
@@ -43,79 +41,54 @@ function httpsRequest(url: string, options: https.RequestOptions, body?: string)
   });
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number } | null> {
-  try {
-    const body = JSON.stringify({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-      client_id: OAUTH_CLIENT_ID,
-    });
+// Track token status for UI feedback
+let tokenStatus: 'ok' | 'expired' | 'missing' = 'missing';
+export function getTokenStatus(): string { return tokenStatus; }
 
-    const resp = await httpsRequest(TOKEN_REFRESH_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, body);
-
-    if (resp.statusCode !== 200) {
-      console.error(`[plan-usage] Token refresh failed: ${resp.statusCode}`);
-      return null;
-    }
-
-    const data = JSON.parse(resp.data);
-    const accessToken = data.access_token;
-    const expiresAt = Date.now() + (data.expires_in * 1000);
-
-    // Update the credentials file with the new token
-    try {
-      const creds = readCredentials();
-      if (creds?.claudeAiOauth) {
-        creds.claudeAiOauth.accessToken = accessToken;
-        creds.claudeAiOauth.expiresAt = expiresAt;
-        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), 'utf-8');
-        console.log('[plan-usage] Refreshed and saved new access token');
-      }
-    } catch {
-      console.warn('[plan-usage] Could not save refreshed token to credentials file');
-    }
-
-    return { accessToken, expiresAt };
-  } catch (err) {
-    console.error('[plan-usage] Token refresh error:', err);
-    return null;
-  }
-}
-
-async function getValidAccessToken(): Promise<{ token: string; subscriptionType: string; rateLimitTier: string } | null> {
+function getAccessToken(): { token: string; subscriptionType: string; rateLimitTier: string } | null {
+  // Always re-read credentials file — Claude Code refreshes it when the user runs `claude`
   const creds = readCredentials();
   if (!creds?.claudeAiOauth) {
     console.error('[plan-usage] No claudeAiOauth credentials found');
+    tokenStatus = 'missing';
     return null;
   }
 
   const oauth = creds.claudeAiOauth;
-  let token = oauth.accessToken;
   const subscriptionType = oauth.subscriptionType ?? 'unknown';
   const rateLimitTier = oauth.rateLimitTier ?? 'unknown';
 
-  // Check if token is expired (with 5 min buffer)
-  if (oauth.expiresAt && oauth.expiresAt < Date.now() + 300_000) {
-    console.log('[plan-usage] Token expired or expiring soon, refreshing...');
-    const refreshed = await refreshAccessToken(oauth.refreshToken);
-    if (refreshed) {
-      token = refreshed.accessToken;
-    } else {
-      console.warn('[plan-usage] Using potentially expired token');
-    }
+  // Check if token is expired
+  if (oauth.expiresAt && oauth.expiresAt < Date.now()) {
+    console.warn('[plan-usage] Token expired. User needs to run `claude` to refresh.');
+    tokenStatus = 'expired';
+    // Still return it — the API will tell us if it's truly rejected
+  } else {
+    tokenStatus = 'ok';
   }
 
-  return { token, subscriptionType, rateLimitTier };
+  return { token: oauth.accessToken, subscriptionType, rateLimitTier };
+}
+
+// Watch credentials file for changes (Claude Code refreshes the token)
+let credentialsWatcher: fs.FSWatcher | null = null;
+let onCredentialsChanged: (() => void) | null = null;
+
+export function watchCredentials(callback: () => void): void {
+  onCredentialsChanged = callback;
+  try {
+    if (credentialsWatcher) credentialsWatcher.close();
+    credentialsWatcher = fs.watch(CREDENTIALS_PATH, { persistent: false }, () => {
+      console.log('[plan-usage] Credentials file changed, will re-fetch usage');
+      callback();
+    });
+  } catch {
+    // File may not exist yet
+  }
 }
 
 export async function fetchPlanUsage(): Promise<PlanUsage | null> {
-  const auth = await getValidAccessToken();
+  const auth = getAccessToken();
   if (!auth) return null;
 
   try {
@@ -130,11 +103,18 @@ export async function fetchPlanUsage(): Promise<PlanUsage | null> {
       },
     });
 
+    if (resp.statusCode === 401 || resp.statusCode === 403) {
+      console.error(`[plan-usage] Auth failed (${resp.statusCode}). Token expired — run \`claude\` to refresh.`);
+      tokenStatus = 'expired';
+      return null;
+    }
+
     if (resp.statusCode !== 200) {
       console.error(`[plan-usage] Usage API returned ${resp.statusCode}: ${resp.data.slice(0, 200)}`);
       return null;
     }
 
+    tokenStatus = 'ok';
     const data = JSON.parse(resp.data);
     console.log('[plan-usage] Got usage data:', JSON.stringify(data));
 

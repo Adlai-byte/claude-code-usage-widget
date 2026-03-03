@@ -107,10 +107,26 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
         </>
       ) : (
         <>
-          {/* Fallback: show local token data when API data unavailable */}
-          <div className="text-[11px] mb-2" style={{ color: '#9ca3af' }}>
-            Connecting to Claude API...
-          </div>
+          {/* Show auth status message */}
+          {data.tokenStatus === 'expired' ? (
+            <div className="mb-3">
+              <div className="text-xs font-semibold mb-1" style={{ color: '#f59e0b' }}>Session expired</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: '#9ca3af' }}>
+                Open Claude Code in your terminal to refresh the session. The widget will update automatically.
+              </div>
+            </div>
+          ) : data.tokenStatus === 'missing' ? (
+            <div className="mb-3">
+              <div className="text-xs font-semibold mb-1" style={{ color: '#ef4444' }}>Not logged in</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: '#9ca3af' }}>
+                Run <span style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>claude</span> in your terminal and log in to see plan usage.
+              </div>
+            </div>
+          ) : (
+            <div className="text-[11px] mb-2" style={{ color: '#9ca3af' }}>
+              Connecting to Claude API...
+            </div>
+          )}
           <div className="mb-2">
             <div className="text-xs font-semibold mb-1" style={{ color: '#e5e5e5' }}>
               Session: {formatTokens(data.currentSessionTokens)} tokens
