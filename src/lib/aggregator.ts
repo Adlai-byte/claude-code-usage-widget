@@ -1,9 +1,13 @@
 import { SessionRecord, SessionInfo, UsageData, DailyUsage, ProjectUsage, HeatmapCell, ModelUsage } from '../types';
 import { calculateCost } from './parser';
 
+// Fix #11: Use local time instead of UTC so "today" matches the user's actual day
 function formatDate(ts: number): string {
   const d = new Date(ts);
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function extractDisplayName(project: string): string {
@@ -17,9 +21,10 @@ function getToday(): string {
 
 function getWeekStart(): string {
   const now = new Date();
-  const day = now.getUTCDay(); // 0=Sun
-  const diff = now.getTime() - day * 86400000;
-  return formatDate(diff);
+  // Use local day-of-week and set to midnight to avoid DST issues
+  const day = now.getDay(); // 0=Sun, local time
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+  return formatDate(start.getTime());
 }
 
 export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): UsageData {
@@ -118,8 +123,8 @@ export function aggregateUsage(records: SessionRecord[], infos: SessionInfo[]): 
     modelEntry.estimatedCost += cost;
 
     const d = new Date(rec.timestamp);
-    const day = d.getUTCDay();
-    const hour = d.getUTCHours();
+    const day = d.getDay();
+    const hour = d.getHours();
     const key = `${day}-${hour}`;
     if (!heatmapMap.has(key)) {
       heatmapMap.set(key, { day, hour, count: 0 });

@@ -31,7 +31,11 @@ export function useUsageData(refreshInterval: number) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!window.electronAPI) return;
+    // Fix #13: Don't leave loading=true forever if electronAPI is unavailable
+    if (!window.electronAPI) {
+      setLoading(false);
+      return;
+    }
     try {
       const result = await window.electronAPI.getUsageData();
       setData(result);

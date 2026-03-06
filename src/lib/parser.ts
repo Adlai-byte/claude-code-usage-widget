@@ -9,6 +9,10 @@ export function parseSessionLine(line: string): SessionRecord | null {
     const rawUsage = data.message?.usage ?? data.usage;
     if (!rawUsage) return null;
 
+    // Fix #5: Validate timestamp — NaN would crash toISOString() in aggregator
+    const timestamp = new Date(data.timestamp).getTime();
+    if (isNaN(timestamp)) return null;
+
     const usage: TokenUsage = {
       inputTokens: rawUsage.input_tokens ?? 0,
       outputTokens: rawUsage.output_tokens ?? 0,
@@ -18,7 +22,7 @@ export function parseSessionLine(line: string): SessionRecord | null {
 
     return {
       sessionId: data.sessionId ?? '',
-      timestamp: new Date(data.timestamp).getTime(),
+      timestamp,
       model: data.message?.model ?? 'unknown',
       usage,
     };
@@ -32,10 +36,15 @@ export function parseHistoryLine(line: string): SessionInfo | null {
     const data = JSON.parse(line);
     if (!data.sessionId) return null;
 
+    // Fix #14: Always convert timestamp to number (source may be ISO string)
+    const timestamp = typeof data.timestamp === 'number'
+      ? data.timestamp
+      : new Date(data.timestamp).getTime() || 0;
+
     return {
       sessionId: data.sessionId,
       project: data.project ?? 'Unknown',
-      timestamp: data.timestamp ?? 0,
+      timestamp,
     };
   } catch {
     return null;

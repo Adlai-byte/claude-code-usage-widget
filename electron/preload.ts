@@ -6,8 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUsageData: () => ipcRenderer.invoke('get-usage-data'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
+  // Fix #7: Use removeListener with specific reference instead of removeAllListeners
   onDataUpdate: (callback: (data: any) => void) => {
-    ipcRenderer.on('usage-data-update', (_event, data) => callback(data));
-    return () => ipcRenderer.removeAllListeners('usage-data-update');
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('usage-data-update', listener);
+    return () => ipcRenderer.removeListener('usage-data-update', listener);
   },
 });

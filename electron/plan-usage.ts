@@ -43,7 +43,9 @@ function httpsRequest(url: string, options: https.RequestOptions, body?: string)
 
 // Track token status for UI feedback
 let tokenStatus: 'ok' | 'expired' | 'missing' = 'missing';
-export function getTokenStatus(): string { return tokenStatus; }
+
+// Fix #4: Return type matches the string union, not widened to `string`
+export function getTokenStatus(): 'ok' | 'expired' | 'missing' { return tokenStatus; }
 
 function getAccessToken(): { token: string; subscriptionType: string; rateLimitTier: string } | null {
   // Always re-read credentials file — Claude Code refreshes it when the user runs `claude`
@@ -72,10 +74,8 @@ function getAccessToken(): { token: string; subscriptionType: string; rateLimitT
 
 // Watch credentials file for changes (Claude Code refreshes the token)
 let credentialsWatcher: fs.FSWatcher | null = null;
-let onCredentialsChanged: (() => void) | null = null;
 
 export function watchCredentials(callback: () => void): void {
-  onCredentialsChanged = callback;
   try {
     if (credentialsWatcher) credentialsWatcher.close();
     credentialsWatcher = fs.watch(CREDENTIALS_PATH, { persistent: false }, () => {
@@ -84,6 +84,14 @@ export function watchCredentials(callback: () => void): void {
     });
   } catch {
     // File may not exist yet
+  }
+}
+
+// Fix #6: Export close function for cleanup on app quit
+export function closeCredentialsWatcher(): void {
+  if (credentialsWatcher) {
+    try { credentialsWatcher.close(); } catch { /* ignore */ }
+    credentialsWatcher = null;
   }
 }
 

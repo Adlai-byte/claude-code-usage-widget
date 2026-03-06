@@ -123,8 +123,11 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
               </div>
             </div>
           ) : (
-            <div className="text-[11px] mb-2" style={{ color: '#9ca3af' }}>
-              Connecting to Claude API...
+            <div className="mb-3">
+              <div className="text-xs font-semibold mb-1" style={{ color: '#9ca3af' }}>Unable to fetch plan usage</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: '#6b7280' }}>
+                Check your internet connection, or run <span style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>claude</span> to refresh credentials.
+              </div>
             </div>
           )}
           <div className="mb-2">

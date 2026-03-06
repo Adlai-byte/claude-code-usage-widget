@@ -1,13 +1,12 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, screen, ipcMain } from 'electron';
+import { app, BrowserWindow, screen, ipcMain } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { readHistoryFile, readAllSessionLogs, watchForChanges } from './data-reader';
 import { parseSessionLine, parseHistoryLine } from '../src/lib/parser';
 import { aggregateUsage } from '../src/lib/aggregator';
-import { fetchPlanUsage, watchCredentials, getTokenStatus } from './plan-usage';
+import { fetchPlanUsage, watchCredentials, getTokenStatus, closeCredentialsWatcher } from './plan-usage';
 
 let mainWindow: BrowserWindow | null = null;
-let tray: Tray | null = null;
 let isExpanded = false;
 
 const COMPACT_WIDTH = 360;
@@ -21,6 +20,9 @@ function getWindowPosition() {
   const y = screenHeight - COMPACT_HEIGHT - 20;
   return { x, y };
 }
+
+// Store watchers for cleanup on quit
+let fileWatchers: fs.FSWatcher[] = [];
 
 function createWindow() {
   const { x, y } = getWindowPosition();
@@ -42,6 +44,13 @@ function createWindow() {
     },
   });
 
+  // Fix #1: Register did-finish-load BEFORE loading the page
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[main] Renderer loaded, sending data...');
+    loadAndSendData();
+    console.log('[main] Data sent');
+  });
+
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -52,11 +61,6 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-}
-
-function createTray() {
-  // Skip tray creation for now — focus on the main window
-  // Tray requires a valid .ico or .png file on Windows
 }
 
 ipcMain.handle('toggle-expand', () => {
@@ -110,8 +114,12 @@ function buildLocalUsageData() {
 
 // Plan usage is fetched on its own timer, cached separately
 let cachedPlanUsage: Awaited<ReturnType<typeof fetchPlanUsage>> = null;
+let refreshInFlight = false;
 
 async function refreshPlanUsage() {
+  // Fix #5: Guard against concurrent API calls
+  if (refreshInFlight) return;
+  refreshInFlight = true;
   try {
     const usage = await fetchPlanUsage();
     if (usage) {
@@ -120,6 +128,8 @@ async function refreshPlanUsage() {
     }
   } catch (err) {
     console.error('[main] Failed to fetch plan usage:', err);
+  } finally {
+    refreshInFlight = false;
   }
   // Always keep cachedPlanUsage — never clear it on failure
 }
@@ -147,8 +157,10 @@ ipcMain.handle('get-settings', () => {
   }
 });
 
+// Fix #3: Return true so renderer gets a boolean as expected
 ipcMain.handle('save-settings', (_event, settings) => {
   fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf-8');
+  return true;
 });
 
 app.whenReady().then(async () => {
@@ -161,34 +173,41 @@ app.whenReady().then(async () => {
   createWindow();
   console.log('[main] Window created');
 
-  // Send data once the renderer is ready
-  mainWindow?.webContents.on('did-finish-load', () => {
-    console.log('[main] Renderer loaded, sending data...');
-    loadAndSendData();
-    console.log('[main] Data sent');
-  });
-
   // Refresh plan usage every 60s on its own timer
-  setInterval(async () => {
+  const planTimer = setInterval(async () => {
     await refreshPlanUsage();
     loadAndSendData();
   }, 60_000);
 
-  // Watch credentials file — when Claude Code refreshes the token, re-fetch immediately
-  watchCredentials(async () => {
-    await refreshPlanUsage();
-    loadAndSendData();
+  // Watch credentials file — when Claude Code refreshes the token, re-fetch with debounce
+  let credDebounce: ReturnType<typeof setTimeout> | null = null;
+  watchCredentials(() => {
+    // Fix #10: Debounce credentials watcher (fs.watch fires multiple events per write on Windows)
+    if (credDebounce) clearTimeout(credDebounce);
+    credDebounce = setTimeout(async () => {
+      await refreshPlanUsage();
+      loadAndSendData();
+    }, 2000);
   });
 
   // Watch for local file changes with 2s debounce (no API call here)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  watchForChanges(() => {
+  fileWatchers = watchForChanges(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       loadAndSendData();
     }, 2000);
   });
   console.log('[main] Setup complete');
+
+  // Fix #6: Clean up watchers and timers on quit
+  app.on('will-quit', () => {
+    clearInterval(planTimer);
+    for (const w of fileWatchers) {
+      try { w.close(); } catch { /* ignore */ }
+    }
+    closeCredentialsWatcher();
+  });
 });
 
 app.on('window-all-closed', () => {
