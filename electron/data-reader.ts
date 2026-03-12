@@ -1,4 +1,5 @@
 import fs from 'fs';
+import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
@@ -6,33 +7,31 @@ const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const HISTORY_FILE = path.join(CLAUDE_DIR, 'history.jsonl');
 const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
 
-// Fix #9: Skip files larger than 100MB to prevent OOM
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
-function readJsonlFile(filePath: string): string[] {
+async function readJsonlFileAsync(filePath: string): Promise<string[]> {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content = await fsp.readFile(filePath, 'utf-8');
     return content.split('\n').filter(line => line.trim().length > 0);
   } catch {
     return [];
   }
 }
 
-export function readHistoryFile(): string[] {
-  return readJsonlFile(HISTORY_FILE);
+export async function readHistoryFile(): Promise<string[]> {
+  return readJsonlFileAsync(HISTORY_FILE);
 }
 
-// Fix #12: Recursively find all .jsonl files under a directory
-function findJsonlFiles(dir: string): string[] {
+async function findJsonlFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
   try {
-    const entries = fs.readdirSync(dir);
+    const entries = await fsp.readdir(dir);
     for (const entry of entries) {
       const fullPath = path.join(dir, entry);
       try {
-        const stat = fs.statSync(fullPath);
+        const stat = await fsp.stat(fullPath);
         if (stat.isDirectory()) {
-          results.push(...findJsonlFiles(fullPath));
+          results.push(...await findJsonlFiles(fullPath));
         } else if (entry.endsWith('.jsonl')) {
           results.push(fullPath);
         }
@@ -46,29 +45,37 @@ function findJsonlFiles(dir: string): string[] {
   return results;
 }
 
-export function readAllSessionLogs(): string[] {
+export async function readAllSessionLogs(): Promise<string[]> {
   const lines: string[] = [];
   try {
-    const jsonlFiles = findJsonlFiles(PROJECTS_DIR);
+    const jsonlFiles = await findJsonlFiles(PROJECTS_DIR);
 
-    for (const filePath of jsonlFiles) {
-      try {
-        // Fix #9: Skip very large files to prevent OOM
-        const fileStat = fs.statSync(filePath);
-        if (fileStat.size > MAX_FILE_SIZE) {
-          console.warn(`[data-reader] Skipping large file (${(fileStat.size / 1024 / 1024).toFixed(0)}MB): ${filePath}`);
-          continue;
-        }
-        const content = fs.readFileSync(filePath, 'utf-8');
-        const fileLines = content.split('\n');
-        for (const line of fileLines) {
-          // Quick pre-filter: only keep lines that contain "assistant" and "usage"
-          if ((line.includes('"type":"assistant"') || line.includes('"type": "assistant"')) && line.includes('"usage"')) {
-            lines.push(line);
+    // Read files in batches to avoid opening too many at once
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < jsonlFiles.length; i += BATCH_SIZE) {
+      const batch = jsonlFiles.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(async (filePath) => {
+        const filtered: string[] = [];
+        try {
+          const fileStat = await fsp.stat(filePath);
+          if (fileStat.size > MAX_FILE_SIZE) {
+            console.warn(`[data-reader] Skipping large file (${(fileStat.size / 1024 / 1024).toFixed(0)}MB): ${filePath}`);
+            return filtered;
           }
+          const content = await fsp.readFile(filePath, 'utf-8');
+          const fileLines = content.split('\n');
+          for (const line of fileLines) {
+            if ((line.includes('"type":"assistant"') || line.includes('"type": "assistant"')) && line.includes('"usage"')) {
+              filtered.push(line);
+            }
+          }
+        } catch {
+          // Skip files that can't be read
         }
-      } catch {
-        // Skip files that can't be read
+        return filtered;
+      }));
+      for (const result of results) {
+        lines.push(...result);
       }
     }
   } catch {

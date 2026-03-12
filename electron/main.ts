@@ -44,10 +44,10 @@ function createWindow() {
     },
   });
 
-  // Fix #1: Register did-finish-load BEFORE loading the page
-  mainWindow.webContents.on('did-finish-load', () => {
+  // Register did-finish-load BEFORE loading the page
+  mainWindow.webContents.on('did-finish-load', async () => {
     console.log('[main] Renderer loaded, sending data...');
-    loadAndSendData();
+    await loadAndSendData();
     console.log('[main] Data sent');
   });
 
@@ -93,9 +93,11 @@ function getSettingsPath() {
   return path.join(app.getPath('userData'), 'widget-settings.json');
 }
 
-function buildLocalUsageData() {
-  const historyLines = readHistoryFile();
-  const sessionLines = readAllSessionLogs();
+async function buildLocalUsageData() {
+  const [historyLines, sessionLines] = await Promise.all([
+    readHistoryFile(),
+    readAllSessionLogs(),
+  ]);
 
   const records = [];
   for (const line of sessionLines) {
@@ -134,18 +136,28 @@ async function refreshPlanUsage() {
   // Always keep cachedPlanUsage — never clear it on failure
 }
 
-function buildUsageData() {
-  const localData = buildLocalUsageData();
+async function buildUsageData() {
+  const localData = await buildLocalUsageData();
   return { ...localData, planUsage: cachedPlanUsage, tokenStatus: getTokenStatus() };
 }
 
-function loadAndSendData() {
-  const data = buildUsageData();
-  mainWindow?.webContents.send('usage-data-update', data);
+let dataRefreshInFlight = false;
+
+async function loadAndSendData() {
+  if (dataRefreshInFlight) return;
+  dataRefreshInFlight = true;
+  try {
+    const data = await buildUsageData();
+    mainWindow?.webContents.send('usage-data-update', data);
+  } catch (err) {
+    console.error('[main] Failed to build usage data:', err);
+  } finally {
+    dataRefreshInFlight = false;
+  }
 }
 
-ipcMain.handle('get-usage-data', () => {
-  return buildUsageData();
+ipcMain.handle('get-usage-data', async () => {
+  return await buildUsageData();
 });
 
 ipcMain.handle('get-settings', () => {
