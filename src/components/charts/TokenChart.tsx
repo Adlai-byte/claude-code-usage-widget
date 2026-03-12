@@ -19,7 +19,7 @@ export default function TokenChart({ data }: Props) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} tickFormatter={d => d.slice(5)} />
           <YAxis tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} tickFormatter={formatK} />
-          <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} labelStyle={{ color: 'var(--text-primary)' }} formatter={(val: number, name: string) => [formatK(val), name]} />
+          <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} labelStyle={{ color: 'var(--text-primary)' }} formatter={(val: number | undefined, name: string) => [formatK(val ?? 0), name]} />
           <Area type="monotone" dataKey="inputTokens" name="Input" stackId="1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} />
           <Area type="monotone" dataKey="outputTokens" name="Output" stackId="1" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
           <Area type="monotone" dataKey="cacheReadTokens" name="Cache Read" stackId="1" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.2} />

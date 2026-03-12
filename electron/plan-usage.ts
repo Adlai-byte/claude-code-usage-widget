@@ -36,6 +36,9 @@ function httpsRequest(url: string, options: https.RequestOptions, body?: string)
       res.on('end', () => resolve({ statusCode: res.statusCode ?? 0, data }));
     });
     req.on('error', reject);
+    req.setTimeout(15000, () => {
+      req.destroy(new Error('Request timed out after 15s'));
+    });
     if (body) req.write(body);
     req.end();
   });
@@ -105,7 +108,7 @@ export async function fetchPlanUsage(): Promise<PlanUsage | null> {
       headers: {
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'User-Agent': 'claude-code/2.0.32',
+        'User-Agent': `claude-usage-widget/${require('../package.json').version}`,
         'Authorization': `Bearer ${auth.token}`,
         'anthropic-beta': 'oauth-2025-04-20',
       },
@@ -124,7 +127,7 @@ export async function fetchPlanUsage(): Promise<PlanUsage | null> {
 
     tokenStatus = 'ok';
     const data = JSON.parse(resp.data);
-    console.log('[plan-usage] Got usage data:', JSON.stringify(data));
+    console.log('[plan-usage] Got usage data (keys:', Object.keys(data).join(', ') + ')');
 
     return {
       fiveHour: data.five_hour ? {

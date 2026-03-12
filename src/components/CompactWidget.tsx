@@ -26,9 +26,9 @@ function getResetLabel(resetsAt: string | null): string {
 }
 
 function getBarColor(pct: number): string {
-  if (pct >= 90) return '#ef4444';
-  if (pct >= 75) return '#f59e0b';
-  return '#3b82f6';
+  if (pct >= 90) return 'var(--danger, #ef4444)';
+  if (pct >= 75) return 'var(--warning, #f59e0b)';
+  return 'var(--accent, #3b82f6)';
 }
 
 const ZERO_TIER: PlanUsageTier = { utilization: 0, resetsAt: null };
@@ -39,19 +39,19 @@ function UsageBar({ label, tier }: { label: string; tier: PlanUsageTier }) {
     <div className="mb-2">
       <div className="flex items-start justify-between mb-1.5">
         <div>
-          <div className="text-xs font-semibold" style={{ color: '#e5e5e5' }}>{label}</div>
-          <div className="text-[11px]" style={{ color: '#8b9a7b' }}>{getResetLabel(tier.resetsAt)}</div>
+          <div className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{label}</div>
+          <div className="text-[11px]" style={{ color: 'var(--text-accent)' }}>{getResetLabel(tier.resetsAt)}</div>
         </div>
-        <div className="text-xs text-right" style={{ color: '#9ca3af' }}>
+        <div className="text-xs text-right" style={{ color: 'var(--text-secondary)' }}>
           {pct}% used
         </div>
       </div>
-      <div className="w-full h-2.5 rounded-full" style={{ background: '#3a3a40' }}>
+      <div className="w-full h-2.5 rounded-full" style={{ background: 'var(--bg-secondary)' }}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: Math.max(pct, 1) + '%',
-            background: pct === 0 ? '#4b5563' : getBarColor(pct),
+            background: pct === 0 ? 'var(--text-muted, #4b5563)' : getBarColor(pct),
           }}
         />
       </div>
@@ -72,10 +72,10 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
     <div
       onClick={onExpand}
       className="cursor-pointer h-full flex flex-col p-5 rounded-xl"
-      style={{ background: '#2a2a2e', border: '1px solid #3a3a40', color: '#e5e5e5' }}
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
     >
       {/* Header */}
-      <h2 className="text-sm font-bold mb-4" style={{ color: '#d4a843' }}>Plan usage limits</h2>
+      <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--accent)' }}>Plan usage limits</h2>
 
       {plan ? (
         <>
@@ -83,10 +83,10 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
           <UsageBar label="Current session" tier={plan.fiveHour ?? ZERO_TIER} />
 
           {/* Divider */}
-          <div className="my-3" style={{ borderTop: '1px solid #3a3a40' }} />
+          <div className="my-3" style={{ borderTop: '1px solid var(--border)' }} />
 
           {/* Weekly limits header */}
-          <h2 className="text-sm font-bold mb-3" style={{ color: '#d4a843' }}>Weekly limits</h2>
+          <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--accent)' }}>Weekly limits</h2>
 
           {/* All models (7-day) — always show */}
           <UsageBar label="All models" tier={plan.sevenDay ?? ZERO_TIER} />
@@ -110,31 +110,31 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
           {/* Show auth status message */}
           {data.tokenStatus === 'expired' ? (
             <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: '#f59e0b' }}>Session expired</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: '#9ca3af' }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--warning, #f59e0b)' }}>Session expired</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Open Claude Code in your terminal to refresh the session. The widget will update automatically.
               </div>
             </div>
           ) : data.tokenStatus === 'missing' ? (
             <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: '#ef4444' }}>Not logged in</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: '#9ca3af' }}>
-                Run <span style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>claude</span> in your terminal and log in to see plan usage.
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--danger, #ef4444)' }}>Not logged in</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> in your terminal and log in to see plan usage.
               </div>
             </div>
           ) : (
             <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: '#9ca3af' }}>Unable to fetch plan usage</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: '#6b7280' }}>
-                Check your internet connection, or run <span style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>claude</span> to refresh credentials.
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Unable to fetch plan usage</div>
+              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted, #6b7280)' }}>
+                Check your internet connection, or run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> to refresh credentials.
               </div>
             </div>
           )}
           <div className="mb-2">
-            <div className="text-xs font-semibold mb-1" style={{ color: '#e5e5e5' }}>
+            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
               Session: {formatTokens(data.currentSessionTokens)} tokens
             </div>
-            <div className="text-xs" style={{ color: '#9ca3af' }}>
+            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               Week: {formatTokens(data.weekTokens)} &middot; {formatCost(data.weekCost)}
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function CompactWidget({ data, settings, onExpand }: Props) {
       )}
 
       {/* Footer: plan type + today summary */}
-      <div className="mt-auto pt-3 flex justify-between text-[10px]" style={{ color: '#6b7280' }}>
+      <div className="mt-auto pt-3 flex justify-between text-[10px]" style={{ color: 'var(--text-muted, #6b7280)' }}>
         <span>
           {plan?.subscriptionType
             ? `${plan.subscriptionType.charAt(0).toUpperCase() + plan.subscriptionType.slice(1)} plan`

@@ -22,6 +22,12 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"

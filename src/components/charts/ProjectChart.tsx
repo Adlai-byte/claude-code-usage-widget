@@ -18,7 +18,7 @@ export default function ProjectChart({ data }: Props) {
         <BarChart data={top10} layout="vertical">
           <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} tickFormatter={formatK} />
           <YAxis type="category" dataKey="displayName" tick={{ fontSize: 11, fill: 'var(--text-primary)' }} width={120} />
-          <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(val: number) => [formatK(val), 'Tokens']} />
+          <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(val: number | undefined) => [formatK(val ?? 0), 'Tokens']} />
           <Bar dataKey="totalTokens" fill="var(--accent)" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>

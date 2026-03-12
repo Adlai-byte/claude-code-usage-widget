@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { UsageData } from '../types';
 
 declare global {
@@ -25,13 +25,11 @@ const EMPTY_DATA: UsageData = {
   tokenStatus: 'missing' as const,
 };
 
-export function useUsageData(refreshInterval: number) {
+export function useUsageData(_refreshInterval: number) {
   const [data, setData] = useState<UsageData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
-    // Fix #13: Don't leave loading=true forever if electronAPI is unavailable
     if (!window.electronAPI) {
       setLoading(false);
       return;
@@ -48,19 +46,12 @@ export function useUsageData(refreshInterval: number) {
 
   useEffect(() => {
     loadData();
+    // Rely on main process server-push for updates (file watcher + 60s plan usage timer)
     const cleanup = window.electronAPI?.onDataUpdate((data) => {
       setData(data);
     });
     return () => cleanup?.();
   }, [loadData]);
-
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (refreshInterval > 0) {
-      intervalRef.current = setInterval(loadData, refreshInterval);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [refreshInterval, loadData]);
 
   return { data, loading, refresh: loadData };
 }

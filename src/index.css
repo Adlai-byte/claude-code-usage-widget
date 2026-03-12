@@ -12,6 +12,8 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
+  --text-accent: #8b9a7b;
+  --text-muted: #9ca3af;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +29,8 @@
     --success: #34d399;
     --warning: #fbbf24;
     --danger: #f87171;
+    --text-accent: #8b9a7b;
+    --text-muted: #6b7280;
   }
 }
 

@@ -10,14 +10,13 @@ export function useSettings() {
     });
   }, []);
 
-  // Fix #2: Use functional updater to avoid stale closure on rapid updates
-  const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
-    let next: AppSettings = DEFAULT_SETTINGS;
+  // Compute merged state inside updater, fire save as side effect
+  const updateSettings = useCallback((partial: Partial<AppSettings>) => {
     setSettings(prev => {
-      next = { ...prev, ...partial };
+      const next = { ...prev, ...partial };
+      window.electronAPI?.saveSettings(next);
       return next;
     });
-    await window.electronAPI?.saveSettings(next);
   }, []);
 
   return { settings, updateSettings };

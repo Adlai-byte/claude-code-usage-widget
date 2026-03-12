@@ -63,7 +63,7 @@ export function readAllSessionLogs(): string[] {
         const fileLines = content.split('\n');
         for (const line of fileLines) {
           // Quick pre-filter: only keep lines that contain "assistant" and "usage"
-          if (line.includes('"type":"assistant"') && line.includes('"usage"')) {
+          if ((line.includes('"type":"assistant"') || line.includes('"type": "assistant"')) && line.includes('"usage"')) {
             lines.push(line);
           }
         }
