@@ -19,9 +19,11 @@ interface Props {
   onUpdateSettings: (partial: Partial<AppSettings>) => void;
   onCollapse: () => void;
   onRefresh: () => void;
+  onMinimize: () => void;
+  onClose: () => void;
 }
 
-export default function Dashboard({ data, settings, onUpdateSettings, onCollapse, onRefresh }: Props) {
+export default function Dashboard({ data, settings, onUpdateSettings, onCollapse, onRefresh, onMinimize, onClose }: Props) {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
@@ -34,6 +36,12 @@ export default function Dashboard({ data, settings, onUpdateSettings, onCollapse
         <div className="flex items-center gap-2">
           <button onClick={onRefresh} className="text-xs px-2 py-1 rounded hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>Refresh</button>
           <button onClick={() => setShowSettings(!showSettings)} className="text-xs px-2 py-1 rounded hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>Settings</button>
+          <button onClick={onMinimize} className="w-6 h-6 flex items-center justify-center rounded hover:opacity-80" style={{ color: 'var(--text-secondary)' }} title="Minimize">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" strokeWidth="1.5"/></svg>
+          </button>
+          <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded hover:opacity-80" style={{ color: 'var(--danger, #ef4444)' }} title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" strokeWidth="1.5"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" strokeWidth="1.5"/></svg>
+          </button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ WebkitAppRegion: 'no-drag' } as any}>

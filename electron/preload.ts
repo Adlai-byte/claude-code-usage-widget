@@ -6,7 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUsageData: () => ipcRenderer.invoke('get-usage-data'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
-  // Fix #7: Use removeListener with specific reference instead of removeAllListeners
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
+  setOpacity: (opacity: number) => ipcRenderer.invoke('set-opacity', opacity),
   onDataUpdate: (callback: (data: any) => void) => {
     const listener = (_event: any, data: any) => callback(data);
     ipcRenderer.on('usage-data-update', listener);

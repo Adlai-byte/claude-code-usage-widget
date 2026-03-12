@@ -63,86 +63,91 @@ interface Props {
   data: UsageData;
   settings: AppSettings;
   onExpand: () => void;
+  onMinimize: () => void;
+  onClose: () => void;
 }
 
-export default function CompactWidget({ data, settings, onExpand }: Props) {
+export default function CompactWidget({ data, settings, onExpand, onMinimize, onClose }: Props) {
   const plan = data.planUsage;
 
   return (
     <div
-      onClick={onExpand}
-      className="cursor-pointer h-full flex flex-col p-5 rounded-xl"
+      className="h-full flex flex-col p-5 rounded-xl"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
     >
-      {/* Header */}
-      <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--accent)' }}>Plan usage limits</h2>
+      {/* Header with window controls */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold cursor-pointer" style={{ color: 'var(--accent)' }} onClick={onExpand}>Plan usage limits</h2>
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          <button onClick={onExpand} className="w-5 h-5 flex items-center justify-center rounded hover:opacity-80 text-[10px]" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }} title="Expand">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3.5L5 7.5L9 3.5" stroke="currentColor" strokeWidth="1.5" fill="none"/></svg>
+          </button>
+          <button onClick={onMinimize} className="w-5 h-5 flex items-center justify-center rounded hover:opacity-80 text-[10px]" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }} title="Minimize">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" strokeWidth="1.5"/></svg>
+          </button>
+          <button onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:opacity-80 text-[10px]" style={{ background: 'var(--bg-secondary)', color: 'var(--danger, #ef4444)' }} title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" strokeWidth="1.5"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" strokeWidth="1.5"/></svg>
+          </button>
+        </div>
+      </div>
 
-      {plan ? (
-        <>
-          {/* Current session (5-hour window) */}
-          <UsageBar label="Current session" tier={plan.fiveHour ?? ZERO_TIER} />
-
-          {/* Divider */}
-          <div className="my-3" style={{ borderTop: '1px solid var(--border)' }} />
-
-          {/* Weekly limits header */}
-          <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--accent)' }}>Weekly limits</h2>
-
-          {/* All models (7-day) — always show */}
-          <UsageBar label="All models" tier={plan.sevenDay ?? ZERO_TIER} />
-
-          {/* Sonnet */}
-          {plan.sevenDaySonnet && (
-            <div className="mt-2">
-              <UsageBar label="Sonnet" tier={plan.sevenDaySonnet} />
-            </div>
-          )}
-
-          {/* Opus */}
-          {plan.sevenDayOpus && (
-            <div className="mt-2">
-              <UsageBar label="Opus" tier={plan.sevenDayOpus} />
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* Show auth status message */}
-          {data.tokenStatus === 'expired' ? (
-            <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--warning, #f59e0b)' }}>Session expired</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Open Claude Code in your terminal to refresh the session. The widget will update automatically.
+      {/* Clickable content area to expand */}
+      <div className="flex-1 cursor-pointer" onClick={onExpand} style={{ WebkitAppRegion: 'no-drag' } as any}>
+        {plan ? (
+          <>
+            <UsageBar label="Current session" tier={plan.fiveHour ?? ZERO_TIER} />
+            <div className="my-3" style={{ borderTop: '1px solid var(--border)' }} />
+            <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--accent)' }}>Weekly limits</h2>
+            <UsageBar label="All models" tier={plan.sevenDay ?? ZERO_TIER} />
+            {plan.sevenDaySonnet && (
+              <div className="mt-2">
+                <UsageBar label="Sonnet" tier={plan.sevenDaySonnet} />
+              </div>
+            )}
+            {plan.sevenDayOpus && (
+              <div className="mt-2">
+                <UsageBar label="Opus" tier={plan.sevenDayOpus} />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {data.tokenStatus === 'expired' ? (
+              <div className="mb-3">
+                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--warning, #f59e0b)' }}>Session expired</div>
+                <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Open Claude Code in your terminal to refresh the session. The widget will update automatically.
+                </div>
+              </div>
+            ) : data.tokenStatus === 'missing' ? (
+              <div className="mb-3">
+                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--danger, #ef4444)' }}>Not logged in</div>
+                <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> in your terminal and log in to see plan usage.
+                </div>
+              </div>
+            ) : (
+              <div className="mb-3">
+                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Unable to fetch plan usage</div>
+                <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted, #6b7280)' }}>
+                  Check your internet connection, or run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> to refresh credentials.
+                </div>
+              </div>
+            )}
+            <div className="mb-2">
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                Session: {formatTokens(data.currentSessionTokens)} tokens
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Week: {formatTokens(data.weekTokens)} &middot; {formatCost(data.weekCost)}
               </div>
             </div>
-          ) : data.tokenStatus === 'missing' ? (
-            <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--danger, #ef4444)' }}>Not logged in</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> in your terminal and log in to see plan usage.
-              </div>
-            </div>
-          ) : (
-            <div className="mb-3">
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Unable to fetch plan usage</div>
-              <div className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted, #6b7280)' }}>
-                Check your internet connection, or run <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>claude</span> to refresh credentials.
-              </div>
-            </div>
-          )}
-          <div className="mb-2">
-            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-              Session: {formatTokens(data.currentSessionTokens)} tokens
-            </div>
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Week: {formatTokens(data.weekTokens)} &middot; {formatCost(data.weekCost)}
-            </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
-      {/* Footer: plan type + today summary */}
-      <div className="mt-auto pt-3 flex justify-between text-[10px]" style={{ color: 'var(--text-muted, #6b7280)' }}>
+      {/* Footer */}
+      <div className="pt-3 flex justify-between text-[10px]" style={{ color: 'var(--text-muted, #6b7280)' }}>
         <span>
           {plan?.subscriptionType
             ? `${plan.subscriptionType.charAt(0).toUpperCase() + plan.subscriptionType.slice(1)} plan`

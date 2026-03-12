@@ -89,6 +89,19 @@ ipcMain.handle('toggle-expand', () => {
 
 ipcMain.handle('get-expanded', () => isExpanded);
 
+ipcMain.handle('minimize-window', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('close-window', () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle('set-opacity', (_event, opacity: number) => {
+  const value = Math.max(0.3, Math.min(1, opacity / 100));
+  mainWindow?.setOpacity(value);
+});
+
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'widget-settings.json');
 }

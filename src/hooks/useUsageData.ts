@@ -10,6 +10,9 @@ declare global {
       getExpanded: () => Promise<boolean>;
       getSettings: () => Promise<any>;
       saveSettings: (s: any) => Promise<boolean>;
+      minimizeWindow: () => Promise<void>;
+      closeWindow: () => Promise<void>;
+      setOpacity: (opacity: number) => Promise<void>;
     };
   }
 }

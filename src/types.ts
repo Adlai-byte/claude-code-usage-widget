@@ -86,12 +86,18 @@ export interface UsageData {
   tokenStatus: 'ok' | 'expired' | 'missing';
 }
 
+export type ThemeMode = 'system' | 'dark' | 'light';
+export type AccentColor = 'indigo' | 'blue' | 'green' | 'purple' | 'orange' | 'red';
+
 export interface AppSettings {
   refreshInterval: number;
   dailyBudget: number;
   weeklyBudget: number;
   monthlyBudget: number;
   alertThreshold: number;
+  theme: ThemeMode;
+  accentColor: AccentColor;
+  windowOpacity: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -100,6 +106,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
   weeklyBudget: 0,
   monthlyBudget: 0,
   alertThreshold: 0.75,
+  theme: 'dark',
+  accentColor: 'indigo',
+  windowOpacity: 100,
+};
+
+export const ACCENT_COLORS: Record<AccentColor, { main: string; light: string }> = {
+  indigo: { main: '#6366f1', light: '#818cf8' },
+  blue: { main: '#3b82f6', light: '#60a5fa' },
+  green: { main: '#10b981', light: '#34d399' },
+  purple: { main: '#8b5cf6', light: '#a78bfa' },
+  orange: { main: '#f59e0b', light: '#fbbf24' },
+  red: { main: '#ef4444', light: '#f87171' },
 };
 
 export const MODEL_PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
