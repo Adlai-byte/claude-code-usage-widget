@@ -16,6 +16,7 @@ const APP_VERSION = (() => {
 
 const CREDENTIALS_PATH = path.join(os.homedir(), '.claude', '.credentials.json');
 const USAGE_API_URL = 'https://api.anthropic.com/api/oauth/usage';
+const PROFILE_API_URL = 'https://api.anthropic.com/api/oauth/profile';
 
 interface Credentials {
   claudeAiOauth?: {
@@ -105,6 +106,47 @@ export function closeCredentialsWatcher(): void {
   if (credentialsWatcher) {
     try { credentialsWatcher.close(); } catch { /* ignore */ }
     credentialsWatcher = null;
+  }
+}
+
+export interface AccountInfo {
+  name: string;
+  email: string;
+  plan: string;
+  orgName: string;
+}
+
+let cachedAccountInfo: AccountInfo | null = null;
+
+export function getAccountInfo(): AccountInfo | null { return cachedAccountInfo; }
+
+export async function fetchAccountInfo(): Promise<AccountInfo | null> {
+  const auth = getAccessToken();
+  if (!auth) return null;
+
+  try {
+    const resp = await httpsRequest(PROFILE_API_URL, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': `claude-usage-widget/${APP_VERSION}`,
+        'Authorization': `Bearer ${auth.token}`,
+        'anthropic-beta': 'oauth-2025-04-20',
+      },
+    });
+
+    if (resp.statusCode !== 200) return cachedAccountInfo;
+
+    const data = JSON.parse(resp.data);
+    cachedAccountInfo = {
+      name: data.account?.display_name || data.account?.full_name || 'Unknown',
+      email: data.account?.email || '',
+      plan: data.organization?.organization_type || auth.subscriptionType,
+      orgName: data.organization?.name || '',
+    };
+    return cachedAccountInfo;
+  } catch {
+    return cachedAccountInfo;
   }
 }
 

@@ -4,7 +4,8 @@ import fs from 'fs';
 import { readHistoryFile, readAllSessionLogs, watchForChanges } from './data-reader';
 import { parseSessionLine, parseHistoryLine } from '../src/lib/parser';
 import { aggregateUsage } from '../src/lib/aggregator';
-import { fetchPlanUsage, watchCredentials, getTokenStatus, closeCredentialsWatcher } from './plan-usage';
+import { fetchPlanUsage, fetchAccountInfo, getAccountInfo, watchCredentials, getTokenStatus, closeCredentialsWatcher } from './plan-usage';
+import { exec } from 'child_process';
 
 let mainWindow: BrowserWindow | null = null;
 let isExpanded = false;
@@ -102,6 +103,20 @@ ipcMain.handle('set-opacity', (_event, opacity: number) => {
   mainWindow?.setOpacity(value);
 });
 
+ipcMain.handle('switch-account', async () => {
+  // Delete credentials to force re-login
+  const credPath = path.join(require('os').homedir(), '.claude', '.credentials.json');
+  try {
+    fs.unlinkSync(credPath);
+  } catch { /* may not exist */ }
+  // Open a terminal so user can run `claude` to log in
+  if (process.platform === 'win32') {
+    exec('start cmd /k "echo Run: claude && echo. && echo This will start the login flow. && echo."');
+  }
+  // Refresh data to show logged-out state
+  await loadAndSendData();
+});
+
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'widget-settings.json');
 }
@@ -151,7 +166,7 @@ async function refreshPlanUsage() {
 
 async function buildUsageData() {
   const localData = await buildLocalUsageData();
-  return { ...localData, planUsage: cachedPlanUsage, tokenStatus: getTokenStatus() };
+  return { ...localData, planUsage: cachedPlanUsage, tokenStatus: getTokenStatus(), accountInfo: getAccountInfo() };
 }
 
 let dataRefreshInFlight = false;
@@ -191,8 +206,8 @@ ipcMain.handle('save-settings', (_event, settings) => {
 app.whenReady().then(async () => {
   console.log('[main] App ready, fetching plan usage...');
 
-  // Fetch plan usage FIRST before creating window
-  await refreshPlanUsage();
+  // Fetch plan usage and account info FIRST before creating window
+  await Promise.all([refreshPlanUsage(), fetchAccountInfo()]);
 
   console.log('[main] Creating window...');
   createWindow();
@@ -210,7 +225,7 @@ app.whenReady().then(async () => {
     // Fix #10: Debounce credentials watcher (fs.watch fires multiple events per write on Windows)
     if (credDebounce) clearTimeout(credDebounce);
     credDebounce = setTimeout(async () => {
-      await refreshPlanUsage();
+      await Promise.all([refreshPlanUsage(), fetchAccountInfo()]);
       loadAndSendData();
     }, 2000);
   });

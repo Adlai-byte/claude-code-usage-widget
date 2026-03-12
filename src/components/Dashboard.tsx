@@ -122,7 +122,7 @@ export default function Dashboard({ data, settings, onUpdateSettings, onCollapse
             </div>
           ))}
         </div>
-        {showSettings && <SettingsPanel settings={settings} onUpdate={onUpdateSettings} onClose={() => setShowSettings(false)} />}
+        {showSettings && <SettingsPanel settings={settings} onUpdate={onUpdateSettings} onClose={() => setShowSettings(false)} accountInfo={data.accountInfo} tokenStatus={data.tokenStatus} />}
         <TokenChart data={data.dailyUsage} />
         <div className="grid grid-cols-2 gap-3">
           <SessionChart data={data.dailyUsage} />

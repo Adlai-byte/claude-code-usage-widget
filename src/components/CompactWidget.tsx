@@ -148,10 +148,12 @@ export default function CompactWidget({ data, settings, onExpand, onMinimize, on
 
       {/* Footer */}
       <div className="pt-3 flex justify-between text-[10px]" style={{ color: 'var(--text-muted, #6b7280)' }}>
-        <span>
-          {plan?.subscriptionType
-            ? `${plan.subscriptionType.charAt(0).toUpperCase() + plan.subscriptionType.slice(1)} plan`
-            : 'Loading...'}
+        <span title={data.accountInfo?.email || ''}>
+          {data.accountInfo?.name
+            ? `${data.accountInfo.name} (${plan?.subscriptionType || 'free'})`
+            : plan?.subscriptionType
+              ? `${plan.subscriptionType.charAt(0).toUpperCase() + plan.subscriptionType.slice(1)} plan`
+              : 'Loading...'}
         </span>
         <span>Today: {formatTokens(data.todayTokens)} &middot; {formatCost(data.todayCost)}</span>
       </div>

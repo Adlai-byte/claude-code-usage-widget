@@ -13,6 +13,7 @@ declare global {
       minimizeWindow: () => Promise<void>;
       closeWindow: () => Promise<void>;
       setOpacity: (opacity: number) => Promise<void>;
+      switchAccount: () => Promise<void>;
     };
   }
 }
@@ -26,6 +27,7 @@ const EMPTY_DATA: UsageData = {
   lastUpdated: 0,
   planUsage: null,
   tokenStatus: 'missing' as const,
+  accountInfo: null,
 };
 
 export function useUsageData(_refreshInterval: number) {

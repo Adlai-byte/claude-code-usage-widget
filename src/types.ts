@@ -64,6 +64,13 @@ export interface PlanUsage {
   rateLimitTier: string;         // "default_claude_max_5x", etc.
 }
 
+export interface AccountInfo {
+  name: string;
+  email: string;
+  plan: string;
+  orgName: string;
+}
+
 export interface UsageData {
   totalTokens: number;
   totalCost: number;
@@ -84,6 +91,7 @@ export interface UsageData {
   lastUpdated: number;
   planUsage: PlanUsage | null;
   tokenStatus: 'ok' | 'expired' | 'missing';
+  accountInfo: AccountInfo | null;
 }
 
 export type ThemeMode = 'system' | 'dark' | 'light';

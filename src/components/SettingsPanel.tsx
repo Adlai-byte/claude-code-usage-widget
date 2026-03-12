@@ -1,9 +1,11 @@
-import { AppSettings, ThemeMode, AccentColor, ACCENT_COLORS } from '../types';
+import { AppSettings, ThemeMode, AccentColor, AccountInfo, ACCENT_COLORS } from '../types';
 
 interface Props {
   settings: AppSettings;
   onUpdate: (partial: Partial<AppSettings>) => void;
   onClose: () => void;
+  accountInfo: AccountInfo | null;
+  tokenStatus: 'ok' | 'expired' | 'missing';
 }
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -21,7 +23,13 @@ const ACCENT_OPTIONS: { value: AccentColor; label: string }[] = [
   { value: 'red', label: 'Red' },
 ];
 
-export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
+export default function SettingsPanel({ settings, onUpdate, onClose, accountInfo, tokenStatus }: Props) {
+  const handleSwitchAccount = () => {
+    if (confirm('This will log you out and open a terminal to re-login. Continue?')) {
+      window.electronAPI?.switchAccount();
+    }
+  };
+
   return (
     <div className="rounded-lg p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       <div className="flex justify-between items-center mb-4">
@@ -29,6 +37,31 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         <button onClick={onClose} className="text-xs px-2 py-1 rounded" style={{ color: 'var(--text-secondary)' }}>Close</button>
       </div>
       <div className="space-y-4">
+        {/* Account section */}
+        <div className="pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h4 className="text-xs font-medium mb-3" style={{ color: 'var(--accent)' }}>Account</h4>
+          {accountInfo ? (
+            <div className="mb-3">
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{accountInfo.name}</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{accountInfo.email}</div>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-accent)' }}>
+                {accountInfo.plan === 'claude_max' ? 'Claude Max' : accountInfo.plan === 'claude_pro' ? 'Claude Pro' : accountInfo.plan}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs mb-3" style={{ color: tokenStatus === 'expired' ? 'var(--warning)' : tokenStatus === 'missing' ? 'var(--danger)' : 'var(--text-secondary)' }}>
+              {tokenStatus === 'expired' ? 'Session expired — run `claude` to refresh' : tokenStatus === 'missing' ? 'Not logged in' : 'Loading...'}
+            </div>
+          )}
+          <button
+            onClick={handleSwitchAccount}
+            className="text-xs px-3 py-1.5 rounded hover:opacity-80"
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          >
+            {accountInfo ? 'Switch Account' : 'Log In'}
+          </button>
+        </div>
+
         {/* Appearance section */}
         <div className="pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
           <h4 className="text-xs font-medium mb-3" style={{ color: 'var(--accent)' }}>Appearance</h4>
