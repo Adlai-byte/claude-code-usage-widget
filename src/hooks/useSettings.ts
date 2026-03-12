@@ -1,22 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppSettings, DEFAULT_SETTINGS } from '../types';
 
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const settingsRef = useRef<AppSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     window.electronAPI?.getSettings().then((saved) => {
-      if (saved) setSettings({ ...DEFAULT_SETTINGS, ...saved });
+      if (saved) {
+        const merged = { ...DEFAULT_SETTINGS, ...saved };
+        setSettings(merged);
+        settingsRef.current = merged;
+      }
     });
   }, []);
 
-  // Compute merged state inside updater, fire save as side effect
   const updateSettings = useCallback((partial: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, ...partial };
-      window.electronAPI?.saveSettings(next);
-      return next;
-    });
+    const next = { ...settingsRef.current, ...partial };
+    settingsRef.current = next;
+    setSettings(next);
+    window.electronAPI?.saveSettings(next);
   }, []);
 
   return { settings, updateSettings };

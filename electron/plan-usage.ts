@@ -4,6 +4,16 @@ import os from 'os';
 import https from 'https';
 import { PlanUsage } from '../src/types';
 
+// Read version at module load time (resolves relative to project root, not compiled output)
+const APP_VERSION = (() => {
+  try {
+    const pkgPath = path.join(__dirname, '../../package.json');
+    return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
+  } catch {
+    return '1.0.0';
+  }
+})();
+
 const CREDENTIALS_PATH = path.join(os.homedir(), '.claude', '.credentials.json');
 const USAGE_API_URL = 'https://api.anthropic.com/api/oauth/usage';
 
@@ -108,7 +118,7 @@ export async function fetchPlanUsage(): Promise<PlanUsage | null> {
       headers: {
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-        'User-Agent': `claude-usage-widget/${require('../package.json').version}`,
+        'User-Agent': `claude-usage-widget/${APP_VERSION}`,
         'Authorization': `Bearer ${auth.token}`,
         'anthropic-beta': 'oauth-2025-04-20',
       },
