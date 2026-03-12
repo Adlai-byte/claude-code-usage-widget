@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.node.json && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "build": "tsc -p tsconfig.node.json && vite build",
-    "dist": "npm run build && electron-builder",
+    "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder",
     "preview": "npm run build && electron .",
     "start": "electron .",
     "test": "vitest run",
@@ -30,7 +30,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false
     }
   },
   "keywords": [],

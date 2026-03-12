@@ -62,6 +62,8 @@ npm run dist
 
 Creates a Windows installer (NSIS) in the `release/` directory. The output `.exe` can be distributed and installed like any desktop app.
 
+> **Note:** Code signing is disabled by default. If you get a "Cannot create symbolic link" error, either enable [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) in Windows Settings, or run your terminal as Administrator.
+
 ### Run tests
 
 ```bash
